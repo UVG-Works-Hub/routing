@@ -33,7 +33,7 @@ def main():
     jid = jabberid
     xmpp = SendMsgBot(jid, password, receiver, message)
     xmpp.connect((jid.split('@')[1], 7070), disable_starttls=True)
-    xmpp.process(forever=False)
+    xmpp.process(forever=True)
 
 if __name__ == "__main__":
     main()
