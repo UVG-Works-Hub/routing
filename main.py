@@ -3,7 +3,7 @@ import asyncio
 
 jabberid = "don21610@alumchat.lol"
 password = "admin123"
-receiver = "gar21285@alumchat.lol"
+receiver = "osc21611@alumchat.lol"
 message  = "Hello, this is a message sent from Python!"
 
 class SendMsgBot(slixmpp.ClientXMPP):
@@ -22,8 +22,6 @@ class SendMsgBot(slixmpp.ClientXMPP):
         self.send_message(mto=self.recipient,
                           mbody=self.msg,
                           mtype='chat')
-
-        self.disconnect()
 
     def message(self, msg):
         if msg['type'] in ('chat', 'normal'):
