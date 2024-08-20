@@ -32,9 +32,10 @@ class NetworkManager:
     def send_message(self, from_client, to_client_jid, message_type="message", payload="Hello"):
         message = {
             "type": message_type,
-            "from": from_client.boundjid.full,
+            "from": from_client.boundjid.bare,
             "to": to_client_jid,
             "hops": 0,
+            "path": [],
             "headers": [],
             "payload": payload
         }
@@ -42,9 +43,17 @@ class NetworkManager:
 
     async def simulate_network(self):
         self.logger.info("Starting network simulation...")
-        await asyncio.sleep(5)  # Increased delay to allow more time for connections
-        if len(self.clients) > 1:
-            self.send_message(self.clients[0], self.clients[1].boundjid.bare, "message", "Test message")
+        await asyncio.sleep(10)  # Increased delay to allow more time for LSR to stabilize
+
+        # Test message from A to D (should go through I)
+        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol", "message", "Test message from A to E")
+
+        await asyncio.sleep(5)
+        # Test message from G to A (should go through F, D, I)
+        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol", "message", "Test message from G to A")
+
+
+
         self.logger.info("Network simulation completed.")
 
     async def run_async(self):
@@ -65,15 +74,15 @@ class NetworkManager:
 
 if __name__ == "__main__":
     clients_params = [
-        {"jid": "aj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol", "cj4tcha21881@alumchat.lol"], "costs": {"bj4tcha21881@alumchat.lol": 1, "cj4tcha21881@alumchat.lol": 2}, "mode": "lsr"},
-        {"jid": "bj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol", "fj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 1, "ij4tcha21881@alumchat.lol": 1, "fj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "cj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 2, "dj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "dj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["cj4tcha21881@alumchat.lol", "ej4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol"], "costs": {"cj4tcha21881@alumchat.lol": 1, "ej4tcha21881@alumchat.lol": 1, "ij4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "ej4tcha21881@alumchat.lol", "password": "password", "neighbors": ["dj4tcha21881@alumchat.lol"], "costs": {"dj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "fj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol", "hj4tcha21881@alumchat.lol"], "costs": {"bj4tcha21881@alumchat.lol": 1, "hj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "gj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["hj4tcha21881@alumchat.lol"], "costs": {"hj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "hj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol", "gj4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 1, "gj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "ij4tcha21881@alumchat.lol", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"bj4tcha21881@alumchat.lol": 1, "dj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
+        {"jid": "aj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol", "cj4tcha21881@alumchat.lol"], "costs": {"bj4tcha21881@alumchat.lol": 7, "ij4tcha21881@alumchat.lol": 1, "cj4tcha21881@alumchat.lol": 7}, "mode": "lsr"},
+        {"jid": "bj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "fj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 7, "fj4tcha21881@alumchat.lol": 2}, "mode": "lsr"},
+        {"jid": "cj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 7, "dj4tcha21881@alumchat.lol": 5}, "mode": "lsr"},
+        {"jid": "dj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol", "cj4tcha21881@alumchat.lol", "ej4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 1, "ij4tcha21881@alumchat.lol": 6, "cj4tcha21881@alumchat.lol": 5, "ej4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
+        {"jid": "ej4tcha21881@alumchat.lol", "password": "password", "neighbors": ["dj4tcha21881@alumchat.lol", "gj4tcha21881@alumchat.lol"], "costs": {"dj4tcha21881@alumchat.lol": 1, "gj4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
+        {"jid": "fj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["hj4tcha21881@alumchat.lol", "gj4tcha21881@alumchat.lol", "bj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"hj4tcha21881@alumchat.lol": 4, "bj4tcha21881@alumchat.lol": 2, "gj4tcha21881@alumchat.lol": 3, "dj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
+        {"jid": "gj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol", "ej4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 3, "ej4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
+        {"jid": "hj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
+        {"jid": "ij4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 1, "dj4tcha21881@alumchat.lol": 6}, "mode": "lsr"},
     ]
 
     manager = NetworkManager(clients_params)
