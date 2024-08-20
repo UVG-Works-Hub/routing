@@ -15,7 +15,6 @@ class Client(slixmpp.ClientXMPP):
         self.received_messages = set()
         self.mode = mode
 
-        # Set up logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(self.boundjid.bare)
 
@@ -26,6 +25,7 @@ class Client(slixmpp.ClientXMPP):
         self.logger.info("Session started")
         self.send_presence()
         await self.get_roster()
+        await asyncio.sleep(1)  # Wait a bit before initial link state sharing
         self.share_link_state()
 
     def send_message_to(self, to_jid, message, msg_type='chat'):
@@ -33,11 +33,9 @@ class Client(slixmpp.ClientXMPP):
             message = json.loads(message)
 
         if message['type'] == 'link_state':
-            # Link state messages are sent directly to neighbors
             self.send_message(mto=to_jid, mbody=json.dumps(message), mtype=msg_type)
             self.logger.info(f"Sent a link state message to {to_jid}")
         else:
-            # For other messages, use the routing table
             next_hop = self.get_next_hop(to_jid)
             if next_hop:
                 message['hops'] = message.get('hops', 0) + 1
@@ -48,12 +46,14 @@ class Client(slixmpp.ClientXMPP):
                 self.logger.error(f"No route to {to_jid}")
 
     def get_next_hop(self, destination):
-        print(self.routing_table)
         return self.routing_table.get(destination, (None, None))[0]
 
-    def flood_message(self, message, sender):
-        if message['id'] not in self.received_messages:
-            self.received_messages.add(message['id'])
+    def flood_link_state(self, message, sender):
+        message_id = message['id']
+        if message_id not in self.received_messages:
+            self.received_messages.add(message_id)
+            self.link_state_db[message['from']] = message['state']
+            self.compute_routing_table()
             for neighbor in self.neighbors:
                 if neighbor != sender:
                     self.send_message_to(neighbor, message)
@@ -110,8 +110,7 @@ class Client(slixmpp.ClientXMPP):
                 if isinstance(message_body, dict):
                     if message_body.get("type") == "link_state":
                         self.logger.info(f"Received link state info from {message_body['from']}")
-                        self.link_state_db[message_body["from"]] = message_body["state"]
-                        self.compute_routing_table()
+                        self.flood_link_state(message_body, msg['from'].bare)
                     else:
                         self.logger.info(f"Received a message from {msg['from']}")
                         if message_body['to'] == self.boundjid.bare:

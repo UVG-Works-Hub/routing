@@ -43,16 +43,16 @@ class NetworkManager:
 
     async def simulate_network(self):
         self.logger.info("Starting network simulation...")
-        await asyncio.sleep(10)  # Increased delay to allow more time for LSR to stabilize
+        await asyncio.sleep(20)  # Increased delay to allow more time for LSR to stabilize
 
         # Test message from A to D (should go through I)
-        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol", "message", "Test message from A to E")
+        self.logger.info("Sending message from A to D")
+        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol", "message", "Test message from A to D")
 
         await asyncio.sleep(5)
         # Test message from G to A (should go through F, D, I)
+        self.logger.info("Sending message from G to A")
         self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol", "message", "Test message from G to A")
-
-
 
         self.logger.info("Network simulation completed.")
 
