@@ -6,7 +6,7 @@ import heapq
 import logging
 import time
 
-class Client(slixmpp.ClientXMPP):
+class NetworkClient(slixmpp.ClientXMPP):
     def __init__(self, jid, password, neighbors, costs=None, mode="lsr"):
         super().__init__(jid, password)
         self.neighbors = neighbors
@@ -75,12 +75,18 @@ class Client(slixmpp.ClientXMPP):
         if message_id not in self.received_messages:
             self.received_messages.add(message_id)
             self.logger.info(f"Flooding message: {message}")
-            for neighbor in self.neighbors:
-                if neighbor != sender:
-                    message['hops'] += 1
-                    message['headers'].append({"via": self.boundjid.full})
-                    self.send_message(mto=neighbor, mbody=json.dumps(message), mtype='chat')
-                    self.logger.info(f"Forwarded flood message to {neighbor}")
+
+            # Check if this node is already in the path
+            if self.boundjid.full not in [header['via'] for header in message['headers']]:
+                message['hops'] += 1
+                message['headers'].append({"via": self.boundjid.full})
+
+                for neighbor in self.neighbors:
+                    if neighbor != sender and neighbor not in [header['via'] for header in message['headers']]:
+                        self.send_message(mto=neighbor, mbody=json.dumps(message), mtype='chat')
+                        self.logger.info(f"Forwarded flood message to {neighbor}")
+            else:
+                self.logger.info(f"Stopping flood: node {self.boundjid.full} already in path")
 
     def share_link_state(self):
         message = {
@@ -173,4 +179,5 @@ class Client(slixmpp.ClientXMPP):
             self.logger.info("Connection successful")
             await self.process(forever=True)
         except Exception as e:
-            self.logger.error(f"An error occurred: {str(e)}")
+            # self.logger.error(f"An error occurred: {str(e)}")
+            pass

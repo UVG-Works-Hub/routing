@@ -1,0 +1,11 @@
+jid: "aj4tcha21881@alumchat.lol/algorithms"
+password: "password"
+neighbors:
+  - "bj4tcha21881@alumchat.lol/algorithms"
+  - "ij4tcha21881@alumchat.lol/algorithms"
+  - "cj4tcha21881@alumchat.lol/algorithms"
+costs:
+  "bj4tcha21881@alumchat.lol/algorithms": 7
+  "ij4tcha21881@alumchat.lol/algorithms": 1
+  "cj4tcha21881@alumchat.lol/algorithms": 7
+mode: "lsr"

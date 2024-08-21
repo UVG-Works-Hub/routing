@@ -2,7 +2,7 @@ import asyncio
 import sys
 import json
 import time
-from Client import Client
+from NetworkClient import Client
 import logging
 
 class NetworkManager:
@@ -47,27 +47,7 @@ class NetworkManager:
         # Test LSR mode
         self.logger.info("Testing LSR mode...")
         self.logger.info("Sending message from A to D (should go through I)")
-        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol/algorithms", "message", "Test message from A to D (LSR)")
-
-        await asyncio.sleep(5)
-        self.logger.info("Sending message from G to A (should go through F, D, I)")
-        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol/algorithms", "message", "Test message from G to A (LSR)")
-
-        await asyncio.sleep(5)
-
-        # Test Flooding mode
-        self.logger.info("Testing Flooding mode...")
-        # Change mode to flooding for all clients
-        for client in self.clients:
-            client.mode = "flooding"
-            self.logger.info(f"Changed mode to flooding for {client.boundjid.full}")
-
-        self.logger.info("Sending message from A to D (flooding)")
-        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol/algorithms", "message", "Test message from A to D (Flooding)")
-
-        await asyncio.sleep(5)
-        self.logger.info("Sending message from G to A (flooding)")
-        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol/algorithms", "message", "Test message from G to A (Flooding)")
+        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol/algorithms", "message", "Test message from A to D")
 
         self.logger.info("Network simulation completed.")
 
@@ -88,7 +68,7 @@ class NetworkManager:
             self.logger.info("Simulation terminated manually.")
 
 if __name__ == "__main__":
-    mode = "flooding"
+    mode = "lsr"
 
     clients_params = [
         {"jid": "aj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol/algorithms", "ij4tcha21881@alumchat.lol/algorithms", "cj4tcha21881@alumchat.lol/algorithms"], "costs": {"bj4tcha21881@alumchat.lol/algorithms": 7, "ij4tcha21881@alumchat.lol/algorithms": 1, "cj4tcha21881@alumchat.lol/algorithms": 7}, "mode": mode},
