@@ -4,6 +4,7 @@ import slixmpp
 import json
 import heapq
 import logging
+import time
 
 class Client(slixmpp.ClientXMPP):
     def __init__(self, jid, password, neighbors, costs=None, mode="lsr"):
@@ -11,59 +12,85 @@ class Client(slixmpp.ClientXMPP):
         self.neighbors = neighbors
         self.costs = costs or {}
         self.routing_table = {}
-        self.link_state_db = {self.boundjid.bare: self.costs}
+        self.link_state_db = {self.boundjid.full: self.costs}
         self.received_messages = set()
         self.mode = mode
 
         logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(self.boundjid.bare)
+        self.logger = logging.getLogger(self.boundjid.full)
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
 
     async def start(self, event):
-        self.logger.info("Session started")
+        self.logger.info(f"Session started (Mode: {self.mode})")
         self.send_presence()
         await self.get_roster()
-        await asyncio.sleep(1)  # Wait a bit before initial link state sharing
-        self.share_link_state()
+        await asyncio.sleep(1)
+        self.discover_neighbors()
+        if self.mode == "lsr":
+            self.share_link_state()
+
+    def discover_neighbors(self):
+        for neighbor in self.neighbors:
+            self.send_echo(neighbor)
+
+    def send_echo(self, to_jid):
+        message = {
+            "type": "echo",
+            "from": self.boundjid.full,
+            "to": to_jid,
+            "hops": 0,
+            "headers": [],
+            "payload": str(time.time())
+        }
+        self.send_message_to(to_jid, json.dumps(message))
 
     def send_message_to(self, to_jid, message, msg_type='chat'):
         if isinstance(message, str):
             message = json.loads(message)
 
-        if message['type'] == 'link_state':
+        if message['type'] in ['echo', 'info']:
             self.send_message(mto=to_jid, mbody=json.dumps(message), mtype=msg_type)
-            self.logger.info(f"Sent a link state message to {to_jid}")
+            self.logger.info(f"Sent a {message['type']} message to {to_jid}")
         else:
-            next_hop = self.get_next_hop(to_jid)
-            if next_hop:
-                message['hops'] = message.get('hops', 0) + 1
-                message['path'] = message.get('path', []) + [self.boundjid.bare]
-                self.send_message(mto=next_hop, mbody=json.dumps(message), mtype=msg_type)
-                self.logger.info(f"Forwarded message to {to_jid} via {next_hop}")
-            else:
-                self.logger.error(f"No route to {to_jid}")
+            if self.mode == "lsr":
+                next_hop = self.get_next_hop(to_jid)
+                if next_hop:
+                    message['hops'] += 1
+                    message['headers'].append({"via": self.boundjid.full})
+                    self.send_message(mto=next_hop, mbody=json.dumps(message), mtype=msg_type)
+                    self.logger.info(f"Forwarded message to {to_jid} via {next_hop}")
+                else:
+                    self.logger.error(f"No route to {to_jid}")
+            elif self.mode == "flooding":
+                self.logger.info(f"Initiating flood for message: {message}")
+                self.flood_message(message, self.boundjid.full)
 
     def get_next_hop(self, destination):
         return self.routing_table.get(destination, (None, None))[0]
 
-    def flood_link_state(self, message, sender):
-        message_id = message['id']
+    def flood_message(self, message, sender):
+        message_id = f"{message['from']}_{message['to']}_{message.get('payload', '')}"
         if message_id not in self.received_messages:
             self.received_messages.add(message_id)
-            self.link_state_db[message['from']] = message['state']
-            self.compute_routing_table()
+            self.logger.info(f"Flooding message: {message}")
             for neighbor in self.neighbors:
                 if neighbor != sender:
-                    self.send_message_to(neighbor, message)
+                    message['hops'] += 1
+                    message['headers'].append({"via": self.boundjid.full})
+                    self.send_message(mto=neighbor, mbody=json.dumps(message), mtype='chat')
+                    self.logger.info(f"Forwarded flood message to {neighbor}")
 
     def share_link_state(self):
         message = {
-            "type": "link_state",
-            "from": self.boundjid.bare,
-            "state": self.costs,
-            "id": f"ls_{self.boundjid.bare}_{len(self.link_state_db)}"
+            "type": "info",
+            "from": self.boundjid.full,
+            "to": "all",
+            "hops": 0,
+            "headers": [],
+            "payload": json.dumps(self.costs),
+            "id": f"ls_{self.boundjid.full}_{len(self.link_state_db)}"
         }
         for neighbor in self.neighbors:
             self.send_message_to(neighbor, message)
@@ -72,8 +99,8 @@ class Client(slixmpp.ClientXMPP):
     def compute_routing_table(self):
         self.logger.info("Computing routing table")
         self.routing_table = {}
-        pq = [(0, self.boundjid.bare)]
-        distances = {self.boundjid.bare: 0}
+        pq = [(0, self.boundjid.full)]
+        distances = {self.boundjid.full: 0}
         previous_nodes = {}
 
         while pq:
@@ -88,11 +115,11 @@ class Client(slixmpp.ClientXMPP):
                     previous_nodes[neighbor] = current_node
 
         for node in distances:
-            if node == self.boundjid.bare:
+            if node == self.boundjid.full:
                 continue
             path = []
             current = node
-            while current != self.boundjid.bare:
+            while current != self.boundjid.full:
                 path.insert(0, current)
                 current = previous_nodes.get(current)
                 if current is None:
@@ -108,20 +135,35 @@ class Client(slixmpp.ClientXMPP):
             try:
                 message_body = json.loads(msg['body'])
                 if isinstance(message_body, dict):
-                    if message_body.get("type") == "link_state":
+                    if message_body.get("type") == "info":
                         self.logger.info(f"Received link state info from {message_body['from']}")
-                        self.flood_link_state(message_body, msg['from'].bare)
+                        self.flood_message(message_body, msg['from'].full)
+                        self.link_state_db[message_body["from"]] = json.loads(message_body["payload"])
+                        self.compute_routing_table()
+                    elif message_body.get("type") == "echo":
+                        self.handle_echo(message_body)
                     else:
-                        self.logger.info(f"Received a message from {msg['from']}")
-                        if message_body['to'] == self.boundjid.bare:
-                            message_body['path'] = message_body.get('path', []) + [self.boundjid.bare]
+                        self.logger.info(f"Received a message from {msg['from']}: {message_body}")
+                        if message_body['to'] == self.boundjid.full:
                             self.logger.info(f"Message reached its destination: {message_body}")
-                            self.logger.info(f"Path taken: {' -> '.join(message_body['path'])}")
+                            self.logger.info(f"Path taken: {' -> '.join([h['via'] for h in message_body['headers']])}")
                             self.logger.info(f"Number of hops: {message_body['hops']}")
                         else:
-                            self.send_message_to(message_body['to'], message_body)
+                            if self.mode == "flooding":
+                                self.flood_message(message_body, msg['from'].full)
+                            else:
+                                self.send_message_to(message_body['to'], message_body)
             except json.JSONDecodeError:
                 self.logger.info(f"Received a non-JSON message from {msg['from']}: {msg['body']}")
+
+    def handle_echo(self, message):
+        if message['to'] == self.boundjid.full:
+            # Calculate round-trip time
+            rtt = time.time() - float(message['payload'])
+            self.logger.info(f"ECHO reply from {message['from']}, RTT: {rtt:.3f} seconds")
+        else:
+            # Forward the echo message
+            self.send_message_to(message['to'], message)
 
     async def connect_and_process(self):
         self.logger.info(f"Connecting to {self.boundjid.host}...")

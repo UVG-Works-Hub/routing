@@ -5,9 +5,9 @@ if sys.platform == 'win32':
 
 import slixmpp
 
-jabberid = "cha21881@alumchat.lol"
-password = "admin"
-receiver = "cha21881siete@alumchat.lol"
+jabberid = "<user1>@alumchat.lol"
+password = "<password>"
+receiver = "<user2>@alumchat.lol"
 message  = "Hello, this is a message sent from Python!"
 
 class SendMsgBot(slixmpp.ClientXMPP):
