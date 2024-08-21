@@ -32,10 +32,9 @@ class NetworkManager:
     def send_message(self, from_client, to_client_jid, message_type="message", payload="Hello"):
         message = {
             "type": message_type,
-            "from": from_client.boundjid.bare,
+            "from": from_client.boundjid.full,
             "to": to_client_jid,
             "hops": 0,
-            "path": [],
             "headers": [],
             "payload": payload
         }
@@ -45,14 +44,30 @@ class NetworkManager:
         self.logger.info("Starting network simulation...")
         await asyncio.sleep(20)  # Increased delay to allow more time for LSR to stabilize
 
-        # Test message from A to D (should go through I)
-        self.logger.info("Sending message from A to D")
-        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol", "message", "Test message from A to D")
+        # Test LSR mode
+        self.logger.info("Testing LSR mode...")
+        self.logger.info("Sending message from A to D (should go through I)")
+        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol/algorithms", "message", "Test message from A to D (LSR)")
 
         await asyncio.sleep(5)
-        # Test message from G to A (should go through F, D, I)
-        self.logger.info("Sending message from G to A")
-        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol", "message", "Test message from G to A")
+        self.logger.info("Sending message from G to A (should go through F, D, I)")
+        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol/algorithms", "message", "Test message from G to A (LSR)")
+
+        await asyncio.sleep(5)
+
+        # Test Flooding mode
+        self.logger.info("Testing Flooding mode...")
+        # Change mode to flooding for all clients
+        for client in self.clients:
+            client.mode = "flooding"
+            self.logger.info(f"Changed mode to flooding for {client.boundjid.full}")
+
+        self.logger.info("Sending message from A to D (flooding)")
+        self.send_message(self.clients[0], "dj4tcha21881@alumchat.lol/algorithms", "message", "Test message from A to D (Flooding)")
+
+        await asyncio.sleep(5)
+        self.logger.info("Sending message from G to A (flooding)")
+        self.send_message(self.clients[6], "aj4tcha21881@alumchat.lol/algorithms", "message", "Test message from G to A (Flooding)")
 
         self.logger.info("Network simulation completed.")
 
@@ -73,16 +88,18 @@ class NetworkManager:
             self.logger.info("Simulation terminated manually.")
 
 if __name__ == "__main__":
+    mode = "flooding"
+
     clients_params = [
-        {"jid": "aj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol", "cj4tcha21881@alumchat.lol"], "costs": {"bj4tcha21881@alumchat.lol": 7, "ij4tcha21881@alumchat.lol": 1, "cj4tcha21881@alumchat.lol": 7}, "mode": "lsr"},
-        {"jid": "bj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "fj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 7, "fj4tcha21881@alumchat.lol": 2}, "mode": "lsr"},
-        {"jid": "cj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 7, "dj4tcha21881@alumchat.lol": 5}, "mode": "lsr"},
-        {"jid": "dj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol", "ij4tcha21881@alumchat.lol", "cj4tcha21881@alumchat.lol", "ej4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 1, "ij4tcha21881@alumchat.lol": 6, "cj4tcha21881@alumchat.lol": 5, "ej4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "ej4tcha21881@alumchat.lol", "password": "password", "neighbors": ["dj4tcha21881@alumchat.lol", "gj4tcha21881@alumchat.lol"], "costs": {"dj4tcha21881@alumchat.lol": 1, "gj4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
-        {"jid": "fj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["hj4tcha21881@alumchat.lol", "gj4tcha21881@alumchat.lol", "bj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"hj4tcha21881@alumchat.lol": 4, "bj4tcha21881@alumchat.lol": 2, "gj4tcha21881@alumchat.lol": 3, "dj4tcha21881@alumchat.lol": 1}, "mode": "lsr"},
-        {"jid": "gj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol", "ej4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 3, "ej4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
-        {"jid": "hj4tcha21881@alumchat.lol", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol"], "costs": {"fj4tcha21881@alumchat.lol": 4}, "mode": "lsr"},
-        {"jid": "ij4tcha21881@alumchat.lol", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol", "dj4tcha21881@alumchat.lol"], "costs": {"aj4tcha21881@alumchat.lol": 1, "dj4tcha21881@alumchat.lol": 6}, "mode": "lsr"},
+        {"jid": "aj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["bj4tcha21881@alumchat.lol/algorithms", "ij4tcha21881@alumchat.lol/algorithms", "cj4tcha21881@alumchat.lol/algorithms"], "costs": {"bj4tcha21881@alumchat.lol/algorithms": 7, "ij4tcha21881@alumchat.lol/algorithms": 1, "cj4tcha21881@alumchat.lol/algorithms": 7}, "mode": mode},
+        {"jid": "bj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol/algorithms", "fj4tcha21881@alumchat.lol/algorithms"], "costs": {"aj4tcha21881@alumchat.lol/algorithms": 7, "fj4tcha21881@alumchat.lol/algorithms": 2}, "mode": mode},
+        {"jid": "cj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol/algorithms", "dj4tcha21881@alumchat.lol/algorithms"], "costs": {"aj4tcha21881@alumchat.lol/algorithms": 7, "dj4tcha21881@alumchat.lol/algorithms": 5}, "mode": mode},
+        {"jid": "dj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol/algorithms", "ij4tcha21881@alumchat.lol/algorithms", "cj4tcha21881@alumchat.lol/algorithms", "ej4tcha21881@alumchat.lol/algorithms"], "costs": {"fj4tcha21881@alumchat.lol/algorithms": 1, "ij4tcha21881@alumchat.lol/algorithms": 6, "cj4tcha21881@alumchat.lol/algorithms": 5, "ej4tcha21881@alumchat.lol/algorithms": 1}, "mode": mode},
+        {"jid": "ej4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["dj4tcha21881@alumchat.lol/algorithms", "gj4tcha21881@alumchat.lol/algorithms"], "costs": {"dj4tcha21881@alumchat.lol/algorithms": 1, "gj4tcha21881@alumchat.lol/algorithms": 4}, "mode": mode},
+        {"jid": "fj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["hj4tcha21881@alumchat.lol/algorithms", "gj4tcha21881@alumchat.lol/algorithms", "bj4tcha21881@alumchat.lol/algorithms", "dj4tcha21881@alumchat.lol/algorithms"], "costs": {"hj4tcha21881@alumchat.lol/algorithms": 4, "bj4tcha21881@alumchat.lol/algorithms": 2, "gj4tcha21881@alumchat.lol/algorithms": 3, "dj4tcha21881@alumchat.lol/algorithms": 1}, "mode": mode},
+        {"jid": "gj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol/algorithms", "ej4tcha21881@alumchat.lol/algorithms"], "costs": {"fj4tcha21881@alumchat.lol/algorithms": 3, "ej4tcha21881@alumchat.lol/algorithms": 4}, "mode": mode},
+        {"jid": "hj4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["fj4tcha21881@alumchat.lol/algorithms"], "costs": {"fj4tcha21881@alumchat.lol/algorithms": 4}, "mode": mode},
+        {"jid": "ij4tcha21881@alumchat.lol/algorithms", "password": "password", "neighbors": ["aj4tcha21881@alumchat.lol/algorithms", "dj4tcha21881@alumchat.lol/algorithms"], "costs": {"aj4tcha21881@alumchat.lol/algorithms": 1, "dj4tcha21881@alumchat.lol/algorithms": 6}, "mode": mode},
     ]
 
     manager = NetworkManager(clients_params)
