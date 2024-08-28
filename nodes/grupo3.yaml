@@ -1,9 +1,9 @@
-jid: "grupo3@alumchat.xyz/grupo3A"
-password: ""
+jid: "grupo3@alumchat.lol/grupo3A"
+password: "3"
 neighbors:
-  - "grupo5@alumchat.xyz/grupo3A"
-  - "grupo2@alumchat.xyz/grupo3A"
+  - "grupo5@alumchat.lol/grupo3A"
+  - "grupo2@alumchat.lol/grupo3A"
 costs:
-  "grupo5@alumchat.xyz/grupo3A": 1
-  "grupo2@alumchat.xyz/grupo3A": 1
+  "grupo5@alumchat.lol/grupo3A": 1
+  "grupo2@alumchat.lol/grupo3A": 1
 mode: "lsr"

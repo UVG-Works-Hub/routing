@@ -1,13 +1,13 @@
-jid: "grupo6@alumchat.xyz/grupo3B"
-password: ""
+jid: "grupo6@alumchat.lol/grupo3B"
+password: "6"
 neighbors:
-  - "grupo3@alumchat.xyz/grupo3B"
-  - "grupo1@alumchat.xyz/grupo3B"
-  - "grupo4@alumchat.xyz/grupo3B"
-  - "grupo5@alumchat.xyz/grupo3B"
+  - "grupo3@alumchat.lol/grupo3B"
+  - "grupo1@alumchat.lol/grupo3B"
+  - "grupo4@alumchat.lol/grupo3B"
+  - "grupo5@alumchat.lol/grupo3B"
 costs:
-  "grupo3@alumchat.xyz/grupo3B": 1
-  "grupo1@alumchat.xyz/grupo3B": 1
-  "grupo4@alumchat.xyz/grupo3B": 1
-  "grupo5@alumchat.xyz/grupo3B": 1
+  "grupo3@alumchat.lol/grupo3B": 1
+  "grupo1@alumchat.lol/grupo3B": 1
+  "grupo4@alumchat.lol/grupo3B": 1
+  "grupo5@alumchat.lol/grupo3B": 1
 mode: "lsr"
