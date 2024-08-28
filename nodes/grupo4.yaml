@@ -1,0 +1,9 @@
+jid: "grupo4@alumchat.xyz/grupo3D"
+password: ""
+neighbors:
+  - "grupo6@alumchat.xyz/grupo3D"
+  - "grupo2@alumchat.xyz/grupo3D"
+costs:
+  "grupo6@alumchat.xyz/grupo3D": 1
+  "grupo2@alumchat.xyz/grupo3D": 1
+mode: "lsr"
