@@ -2,7 +2,7 @@ import asyncio
 import sys
 import json
 import time
-from NetworkClient import Client
+from NetworkClient import NetworkClient as Client
 import logging
 
 class NetworkManager:
