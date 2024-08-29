@@ -18,7 +18,7 @@ class InteractiveClientGUI:
         tk.Label(master, text="Config File Path:").pack()
         self.config_path = tk.Entry(master, width=50)
         self.config_path.pack()
-        tk.Button(master, text="Load Config", command=self.load_config).pack()
+        tk.Button(master, text="Load Config", command=self.run_async_load_config).pack()
 
         # Log display area
         self.log_area = scrolledtext.ScrolledText(master, wrap=tk.WORD, width=70, height=20)
@@ -49,15 +49,22 @@ class InteractiveClientGUI:
                         self.log(log)
                         self.last_log += 1
 
-    def load_config(self):
+    async def load_config(self):
         config_file = self.config_path.get()
         try:
             with open(config_file, 'r') as file:
                 self.config = yaml.safe_load(file)
             self.initialize_client()
             self.log("Config loaded successfully.")
+            client_task = asyncio.create_task(self.run_client())
+            client_log = asyncio.create_task(self.get_logs())
+
+            await asyncio.gather(client_task, client_log)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load config: {str(e)}")
+
+    def run_async_load_config(self):
+        asyncio.create_task(self.load_config())
 
     def initialize_client(self):
         self.client = NetworkClient(
@@ -67,8 +74,6 @@ class InteractiveClientGUI:
             costs=self.config["costs"],
             mode=self.config["mode"]
         )
-        asyncio.create_task(self.run_client())
-        asyncio.create_task(self.get_logs())
 
     async def run_client(self):
         try:

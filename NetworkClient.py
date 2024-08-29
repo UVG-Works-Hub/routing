@@ -33,7 +33,8 @@ class NetworkClient(slixmpp.ClientXMPP):
             if level.lower() == 'important':
                 level = 'INFO'
                 getattr(self.logger, level.lower())(message)
-                self.message_log.append(message)
+                
+            self.message_log.append(message)
 
     def send_log(self):
         return self.message_log
