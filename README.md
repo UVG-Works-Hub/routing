@@ -8,7 +8,17 @@ To download it just run
 pip install pyinstaller
 ```
 
-To create the executable run
+To create the executable run based on current OS.
 ```bash
 pyinstaller --onefile --hidden-import yaml --collect-all slixmpp --collect-all tkinter InteractiveClientGUI.py
+```
+
+To create the executable run for Windows (Only works when running on windows.)
+```
+pyinstaller InteractiveClientGUIWin.spec
+```
+
+To create the executable run for Macos (Only works when running on MacOS)
+```
+pyinstaller InteractiveClientGUIMacOS.spec
 ```
