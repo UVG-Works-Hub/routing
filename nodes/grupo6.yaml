@@ -1,13 +1,13 @@
-jid: "grupo6@alumchat.lol/grupoADS"
+jid: "grupo6-ads@alumchat.lol/grupoADS"
 password: "6"
 neighbors:
-  - "grupo3@alumchat.lol/grupoADS"
-  - "grupo1@alumchat.lol/grupoADS"
-  - "grupo4@alumchat.lol/grupoADS"
-  - "grupo5@alumchat.lol/grupoADS"
+  - "grupo3-ads@alumchat.lol/grupoADS"
+  - "grupo1-ads@alumchat.lol/grupoADS"
+  - "grupo4-ads@alumchat.lol/grupoADS"
+  - "grupo5-ads@alumchat.lol/grupoADS"
 costs:
-  "grupo3@alumchat.lol/grupoADS": 1
-  "grupo1@alumchat.lol/grupoADS": 1
-  "grupo4@alumchat.lol/grupoADS": 1
-  "grupo5@alumchat.lol/grupoADS": 1
+  "grupo3-ads@alumchat.lol/grupoADS": 1
+  "grupo1-ads@alumchat.lol/grupoADS": 1
+  "grupo4-ads@alumchat.lol/grupoADS": 1
+  "grupo5-ads@alumchat.lol/grupoADS": 1
 mode: "lsr"
