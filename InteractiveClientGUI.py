@@ -3,6 +3,7 @@ from tkinter import scrolledtext, messagebox
 import asyncio
 import yaml
 from NetworkClient import NetworkClient
+import sys
 
 class InteractiveClientGUI:
     def __init__(self, master):
@@ -104,9 +105,12 @@ class InteractiveClientGUI:
         self.log_area.see(tk.END)
 
 def main():
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     root = tk.Tk()
     app = InteractiveClientGUI(root)
-    
+
     async def run_tk(root, interval=0.05):
         try:
             while True:
