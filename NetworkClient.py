@@ -8,7 +8,7 @@ import time
 import uuid
 
 class NetworkClient(slixmpp.ClientXMPP):
-    def __init__(self, jid, password, neighbors, costs=None, mode="lsr"):
+    def __init__(self, jid, password, neighbors, costs=None, mode="lsr", verbose=False):
         super().__init__(jid, password)
         self.neighbors = neighbors
         self.costs = costs or {}
@@ -17,22 +17,75 @@ class NetworkClient(slixmpp.ClientXMPP):
         self.received_messages = {}
         self.mode = mode
         self.sequence_number = 0
+        self.verbose = verbose
 
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(self.boundjid.full)
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
 
+    def log(self, level, message):
+        if self.verbose or level in ['CRITICAL', 'ERROR'] or 'Important:' in message:
+            getattr(self.logger, level.lower())(message)
+
     async def start(self, event):
-        self.logger.info(f"Session started (Mode: {self.mode})")
+        self.log('INFO', f"Important: Session started (Mode: {self.mode})")
         self.send_presence()
         await self.get_roster()
         await asyncio.sleep(1)
         await self.discover_neighbors()
         if self.mode == "lsr":
             await self.share_link_state()
-        self.schedule_periodic_tasks()
+
+    async def send_message_to(self, to_jid, message, msg_type='chat'):
+        if isinstance(message, str):
+            message = json.loads(message)
+
+        if 'id' not in message:
+            message['id'] = str(uuid.uuid4())
+
+        if message['type'] in ['echo', 'info']:
+            self.send_message(mto=to_jid, mbody=json.dumps(message), mtype=msg_type)
+            self.log('INFO', f"Important: Sent a {message['type']} message to {to_jid}")
+        else:
+            if self.mode == "lsr":
+                next_hop = self.get_next_hop(to_jid)
+                if next_hop:
+                    message['hops'] += 1
+                    message['headers'].append({"via": self.boundjid.full})
+                    self.send_message(mto=next_hop, mbody=json.dumps(message), mtype=msg_type)
+                    self.log('INFO', f"Important: Forwarded message to {to_jid} via {next_hop}")
+                else:
+                    self.log('ERROR', f"No route to {to_jid}")
+            elif self.mode == "flooding":
+                self.log('INFO', f"Important: Initiating flood for message: {message}")
+                await self.flood_message(message, self.boundjid.full)
+
+    def message(self, msg):
+        if msg['type'] in ('chat', 'normal'):
+            try:
+                message_body = json.loads(msg['body'])
+                if isinstance(message_body, dict):
+                    if message_body.get("type") == "info":
+                        asyncio.create_task(self.flood_message(message_body, msg['from'].full))
+                        self.link_state_db[message_body["from"]] = json.loads(message_body["payload"])
+                        self.compute_routing_table()
+                    elif message_body.get("type") == "echo":
+                        self.handle_echo(message_body)
+                    else:
+                        self.log('INFO', f"Important: Received a message from {msg['from']}: {message_body}")
+                        if message_body['to'] == self.boundjid.full:
+                            self.log('INFO', f"Important: Message reached its destination: {message_body}")
+                            self.log('INFO', f"Important: Path taken: {' -> '.join([h['via'] for h in message_body['headers']])}")
+                            self.log('INFO', f"Important: Number of hops: {message_body['hops']}")
+                        else:
+                            if self.mode == "flooding":
+                                asyncio.create_task(self.flood_message(message_body, msg['from'].full))
+                            else:
+                                asyncio.create_task(self.send_message_to(message_body['to'], message_body))
+            except json.JSONDecodeError:
+                self.log('INFO', f"Received a non-JSON message from {msg['from']}: {msg['body']}")
 
     async def discover_neighbors(self):
         for neighbor in self.neighbors:
@@ -50,29 +103,6 @@ class NetworkClient(slixmpp.ClientXMPP):
         }
         await self.send_message_to(to_jid, json.dumps(message))
 
-    async def send_message_to(self, to_jid, message, msg_type='chat'):
-        if isinstance(message, str):
-            message = json.loads(message)
-
-        if 'id' not in message:
-            message['id'] = str(uuid.uuid4())
-
-        if message['type'] in ['echo', 'info']:
-            self.send_message(mto=to_jid, mbody=json.dumps(message), mtype=msg_type)
-            self.logger.info(f"Sent a {message['type']} message to {to_jid}")
-        else:
-            if self.mode == "lsr":
-                next_hop = self.get_next_hop(to_jid)
-                if next_hop:
-                    message['hops'] += 1
-                    message['headers'].append({"via": self.boundjid.full})
-                    self.send_message(mto=next_hop, mbody=json.dumps(message), mtype=msg_type)
-                    self.logger.info(f"Forwarded message to {to_jid} via {next_hop}")
-                else:
-                    self.logger.error(f"No route to {to_jid}")
-            elif self.mode == "flooding":
-                self.logger.info(f"Initiating flood for message: {message}")
-                await self.flood_message(message, self.boundjid.full)
 
     def get_next_hop(self, destination):
         return self.routing_table.get(destination, (None, None))[0]
@@ -142,32 +172,6 @@ class NetworkClient(slixmpp.ClientXMPP):
         # self.logger.info(f"Link State Database: {self.link_state_db}")
         # self.logger.info(f"Computed Routing Table: {self.routing_table}")
 
-    def message(self, msg):
-        if msg['type'] in ('chat', 'normal'):
-            try:
-                message_body = json.loads(msg['body'])
-                if isinstance(message_body, dict):
-                    if message_body.get("type") == "info":
-                        # self.logger.info(f"Received link state info from {message_body['from']}")
-                        asyncio.create_task(self.flood_message(message_body, msg['from'].full))
-                        self.link_state_db[message_body["from"]] = json.loads(message_body["payload"])
-                        self.compute_routing_table()
-                    elif message_body.get("type") == "echo":
-                        self.handle_echo(message_body)
-                    else:
-                        self.logger.info(f"Received a message from {msg['from']}: {message_body}")
-                        if message_body['to'] == self.boundjid.full:
-                            self.logger.info(f"Message reached its destination: {message_body}")
-                            self.logger.info(f"Path taken: {' -> '.join([h['via'] for h in message_body['headers']])}")
-                            self.logger.info(f"Number of hops: {message_body['hops']}")
-                        else:
-                            if self.mode == "flooding":
-                                asyncio.create_task(self.flood_message(message_body, msg['from'].full))
-                            else:
-                                asyncio.create_task(self.send_message_to(message_body['to'], message_body))
-            except json.JSONDecodeError:
-                self.logger.info(f"Received a non-JSON message from {msg['from']}: {msg['body']}")
-
     def handle_echo(self, message):
         if message['to'] == self.boundjid.full:
             rtt = time.time() - float(message['payload'])
@@ -185,11 +189,11 @@ class NetworkClient(slixmpp.ClientXMPP):
                 await self.share_link_state()
 
     async def connect_and_process(self):
-        self.logger.info(f"Connecting to {self.boundjid.host}...")
+        self.log('INFO', f"Important: Connecting to {self.boundjid.host}...")
         self.connect((self.boundjid.host, 7070), disable_starttls=True)
 
         try:
-            self.logger.info("Connection successful")
+            self.log('INFO', "Important: Connection successful")
             await self.process(forever=False)
         except Exception as e:
-            self.logger.error(f"An error occurred: {str(e)}")
+            self.log('ERROR', f"An error occurred: {str(e)}")

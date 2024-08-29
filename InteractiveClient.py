@@ -3,12 +3,13 @@ import asyncio
 from NetworkClient import NetworkClient
 import sys
 import logging
+import aioconsole
 
 class InteractiveClient:
     def __init__(self):
         self.client = None
         self.config = None
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger("InteractiveClient")
 
     def load_config(self, config_file=None):
@@ -21,7 +22,8 @@ class InteractiveClient:
                 "password": input("Enter password: "),
                 "neighbors": input("Enter neighbors (comma-separated): ").split(','),
                 "costs": {},
-                "mode": input("Enter mode (lsr or flooding): ")
+                "mode": input("Enter mode (lsr or flooding): "),
+                "verbose": input("Enable verbose logging? (y/n): ").lower() == 'y'
             }
             for neighbor in self.config["neighbors"]:
                 cost = int(input(f"Enter cost for {neighbor}: "))
@@ -35,10 +37,11 @@ class InteractiveClient:
             password=self.config["password"],
             neighbors=self.config["neighbors"],
             costs=self.config["costs"],
-            mode=self.config["mode"]
+            mode=self.config["mode"],
+            verbose=self.config["verbose"]
         )
 
-    async def run(self):
+    async def run_client(self):
         if not self.client:
             self.logger.error("Client not initialized. Please load configuration first.")
             return
@@ -50,13 +53,12 @@ class InteractiveClient:
 
     async def interactive_send(self):
         while True:
-            await asyncio.sleep(0.1)  # Small delay to allow other tasks to run
-            to_jid = input("Enter recipient's JID (or 'quit' to exit): ")
+            to_jid = await aioconsole.ainput("Enter recipient's JID (or 'quit' to exit): ")
             if to_jid.lower() == 'quit':
                 break
 
-            message_type = input("Enter message type (default: message): ") or "message"
-            payload = input("Enter message payload: ")
+            message_type = await aioconsole.ainput("Enter message type (default: message): ") or "message"
+            payload = await aioconsole.ainput("Enter message payload: ")
             await self.client.send_message_to(to_jid, {
                 "type": message_type,
                 "from": self.client.boundjid.full,
@@ -72,11 +74,7 @@ class InteractiveClient:
         self.load_config(config_file if config_file else None)
         self.initialize_client()
 
-        client_task = asyncio.create_task(self.run())
-
-        # Wait for the client to connect before starting the interactive send
-        await asyncio.sleep(5)  # Give more time for the client to connect and initialize
-
+        client_task = asyncio.create_task(self.run_client())
         interactive_task = asyncio.create_task(self.interactive_send())
 
         await asyncio.gather(client_task, interactive_task)
