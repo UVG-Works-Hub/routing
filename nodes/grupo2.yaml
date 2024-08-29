@@ -11,3 +11,4 @@ costs:
   "grupo4-ads@alumchat.lol/grupoADS": 1
   "grupo5-ads@alumchat.lol/grupoADS": 1
 mode: "lsr"
+verbose: false

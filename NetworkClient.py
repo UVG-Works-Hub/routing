@@ -21,7 +21,7 @@ class NetworkClient(slixmpp.ClientXMPP):
         self.sequence_number = 0
         self.verbose = verbose
 
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(self.boundjid.full)
 
         self.add_event_handler("session_start", self.start)
@@ -31,7 +31,7 @@ class NetworkClient(slixmpp.ClientXMPP):
         if self.verbose or level in ['IMPORTANT', 'CRITICAL', 'ERROR']:
             if level.lower() == 'important':
                 level = 'INFO'
-            getattr(self.logger, level.lower())(message)
+                getattr(self.logger, level.lower())(message)
 
     async def start(self, event):
         self.log('INFO', f"Session started (Mode: {self.mode})")
