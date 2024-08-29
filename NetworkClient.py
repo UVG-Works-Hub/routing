@@ -17,6 +17,7 @@ class NetworkClient(slixmpp.ClientXMPP):
         self.routing_table = {}
         self.link_state_db = {self.boundjid.full: self.costs}
         self.received_messages = {}
+        self.message_log = []
         self.mode = mode
         self.sequence_number = 0
         self.verbose = verbose
@@ -32,6 +33,10 @@ class NetworkClient(slixmpp.ClientXMPP):
             if level.lower() == 'important':
                 level = 'INFO'
                 getattr(self.logger, level.lower())(message)
+                self.message_log.append(message)
+
+    def send_log(self):
+        return self.message_log
 
     async def start(self, event):
         self.log('INFO', f"Session started (Mode: {self.mode})")
