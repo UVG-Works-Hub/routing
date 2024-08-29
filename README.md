@@ -1,5 +1,7 @@
 # routing
-Laboratorio 3 - Algoritmos de Enrutamiento
+## Laboratorio 3 - Algoritmos de Enrutamiento
+
+Reporte: [Laboratorio 3 Redes.pdf](https://github.com/UVG-Works-Hub/routing/blob/main/Laboratorio%203%20Redes.pdf)
 
 To create the executable you can use library pyinstaller
 
